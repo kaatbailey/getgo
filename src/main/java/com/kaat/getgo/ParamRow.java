@@ -5,7 +5,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
-public class ParamRow {
+public class ParamRow implements RequestController.TableRow {
     private final BooleanProperty selected;
     private final StringProperty key;
     private final StringProperty value;
@@ -16,16 +16,11 @@ public class ParamRow {
         this.value = new SimpleStringProperty(value);
     }
 
-    public BooleanProperty selectedProperty() {
-        return selected;
-    }
+    public BooleanProperty selectedProperty() {return selected;}
 
-    public StringProperty keyProperty() {
-        return key;
-    }
+    public StringProperty keyProperty() {return key;}
 
-    public StringProperty valueProperty() {
-        return value;
-    }
+    public StringProperty valueProperty() {return value;}
+
 }
 

@@ -1,6 +1,8 @@
 package com.kaat.getgo;
 
+import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -9,7 +11,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 
 import javafx.scene.control.cell.CheckBoxTableCell;
@@ -84,24 +85,39 @@ public class RequestController {
 
 
     public void initialize() {
-        // Initialize the TableView columns
+
+        // Initialize the Param columns
         checkColumn.setCellValueFactory(cellData -> cellData.getValue().selectedProperty());
         checkColumn.setCellFactory(CheckBoxTableCell.forTableColumn(checkColumn));
+
+        // Key and Value columns for Param table
         keyColumn.setCellValueFactory(cellData -> cellData.getValue().keyProperty());
         keyColumn.setCellFactory(TextFieldTableCell.forTableColumn());
         valueColumn.setCellValueFactory(cellData -> cellData.getValue().valueProperty());
         valueColumn.setCellFactory(TextFieldTableCell.forTableColumn());
 
+
+        // Check column for Header table
+        checkHeaderColumn.setCellValueFactory(cellData -> cellData.getValue().selectedProperty());
+        checkHeaderColumn.setCellFactory(CheckBoxTableCell.forTableColumn(checkHeaderColumn));
+
+      // Key and Value columns for Header table
+        keyHeaderColumn.setCellValueFactory(cellData -> cellData.getValue().keyProperty());
+        keyHeaderColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+        valueHeaderColumn.setCellValueFactory(cellData -> cellData.getValue().valueProperty());
+        valueHeaderColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+
+
         // Create an example row (you can add more rows programmatically)
         List<ParamRow> paramRows = new ArrayList<>();
-        //paramRows.add(new ParamRow(true, "Param1", "Value1"));
+        paramRows.add(new ParamRow(true, "Param1", "Value1"));
 
         paramsTable.setItems(FXCollections.observableList(paramRows));
 
 
         // Create an example row for headers (you can add more rows programmatically)
         List<HeaderRow> headerRows = new ArrayList<>();
-        //headerRows.add(new HeaderRow(true, "Content-Type", "application/json"));
+        headerRows.add(new HeaderRow(true, "Content-Type", "application/json"));
 
         headersTable.setItems(FXCollections.observableList(headerRows));
 
@@ -126,9 +142,9 @@ public class RequestController {
             }
             request.append("Request Method: ").append(selectedMethod).append("\n");
 
-//todo: handle new Params and Headers structures.
-            String requestParams = (params != null) ? params.getText() : null;
-            String requestHeaders = (headers != null) ? headers.getText() : null;
+            // Extract Params and Headers from their respective TableViews
+            String requestParams = extractTableValues(paramsTable);
+            String requestHeaders = extractTableValues(headersTable);
             String authType = (authorization != null) ? authorization.getValue() : null;
             String additionalSettings = (settings != null) ? settings.getText() : null;
 
@@ -159,6 +175,29 @@ public class RequestController {
             // You can show an error message to the user or take appropriate action.
         }
     }
+
+    public interface TableRow {
+        StringProperty keyProperty();
+        StringProperty valueProperty();
+    }
+
+
+    private String extractTableValues(TableView<? extends TableRow> tableView) {
+        ObservableList<? extends TableRow> rows = tableView.getItems();
+        StringBuilder values = new StringBuilder();
+
+        for (TableRow row : rows) {
+            String key = String.valueOf(row.keyProperty());
+            String value = String.valueOf(row.valueProperty());
+
+            if (key != null && !key.isEmpty() && value != null && !value.isEmpty()) {
+                values.append(key).append(": ").append(value).append("\n");
+            }
+        }
+
+        return values.toString().trim();
+    }
+
 
 
     private boolean isValidURL(String url) {
