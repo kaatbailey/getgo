@@ -16,6 +16,8 @@
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.PasswordField?>
+<?import org.controlsfx.control.ToggleSwitch?>
+<?import javafx.scene.control.Slider?>
 <AnchorPane prefHeight="600.0" prefWidth="-1.0" xmlns="http://javafx.com/javafx/20" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.kaat.getgo.RequestController">
     <children>
         <!-- First Line: Method Type, URL Text Box, and Send Request Button -->
@@ -121,8 +123,40 @@
 
                 <!-- Settings Section -->
                 <TitledPane text="Settings">
-                    <TextArea fx:id="settings" promptText="Additional settings"/>
+                    <VBox spacing="10">
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Automatically follow redirects: When enabled, Postman will automatically follow HTTP redirects (e.g., from HTTP to HTTPS) during requests." />
+                            <ToggleSwitch fx:id="followRedirectsToggle" selected="true" />
+                        </HBox>
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Maximum number of redirects: This setting allows you to specify the maximum number of redirects Postman will follow. It's used in conjunction with the 'Automatically follow redirects' option." />
+                            <Slider fx:id="maxRedirectsSlider" min="0" max="10" value="0" blockIncrement="1" minorTickCount="0" majorTickUnit="1" showTickLabels="true" showTickMarks="true" snapToTicks="true" />
+                            <Label text="Max:" />
+                            <TextField fx:id="maxRedirectsTextField" promptText="Enter a number" />
+                        </HBox>
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Enable SSL certificate verification: Enabling this option ensures that Postman verifies the SSL certificates of the servers it connects to. It's commonly used to ensure secure connections." />
+                            <ToggleSwitch fx:id="verifySSLCertificatesToggle" selected="true" />
+                        </HBox>
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Follow original HTTP Method: When enabled, Postman will follow redirects using the original HTTP method (e.g., GET, POST) of the request." />
+                            <ToggleSwitch fx:id="followOriginalMethodToggle" />
+                        </HBox>
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Follow Authorization header: This setting is used when you want to forward the authorization header when following redirects." />
+                            <ToggleSwitch fx:id="followAuthorizationHeaderToggle" />
+                        </HBox>
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Encode URL Automatically: This is used to automatically encode URLs in your requests, ensuring they comply with URL encoding standards." />
+                            <ToggleSwitch fx:id="encodeURLAutomaticallyToggle" selected="true" />
+                        </HBox>
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Enable strict HTTP parser: Enabling this option makes Postman more strict in parsing HTTP responses. It's used for cases where strict compliance with HTTP standards is required." />
+                            <ToggleSwitch fx:id="strictHTTPParserToggle" />
+                        </HBox>
+                    </VBox>
                 </TitledPane>
+
             </panes>
         </Accordion>
 

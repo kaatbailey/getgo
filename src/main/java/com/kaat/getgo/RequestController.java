@@ -82,7 +82,10 @@ public class RequestController {
     @FXML
     private TableColumn<HeaderRow, String> valueHeaderColumn;
 
-
+    @FXML
+    private Slider maxRedirectsSlider;
+    @FXML
+    private TextField maxRedirectsTextField;
 
     public void initialize() {
 
@@ -124,6 +127,13 @@ public class RequestController {
         //select authorization combobox
         authorization.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             handleAuthorizationTypeChange(newValue);
+        });
+
+        // Add a listener to update the text field when the slider value changes
+        maxRedirectsSlider.valueChangingProperty().addListener((observable, oldValue, isChanging) -> {
+            if (!isChanging) {
+                maxRedirectsTextField.setText(Integer.toString((int) maxRedirectsSlider.getValue()));
+            }
         });
 
     }
