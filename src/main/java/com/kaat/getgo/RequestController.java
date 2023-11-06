@@ -16,6 +16,7 @@ import java.net.URL;
 import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.HBox;
+import org.controlsfx.control.ToggleSwitch;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -87,6 +88,10 @@ public class RequestController {
     @FXML
     private TextField maxRedirectsTextField;
 
+    @FXML
+    private ToggleSwitch followRedirectsToggle;
+
+
     public void initialize() {
 
         // Initialize the Param columns
@@ -136,7 +141,14 @@ public class RequestController {
             }
         });
 
+        //Todo: we need to handle the redirects being changed and the redirection itself.
+        followRedirectsToggle.selectedProperty().addListener((observable, oldValue, newValue) -> {
+            // Handle the toggle action here based on the 'newValue' value
+            // If newValue is true, redirects are enabled; if false, they are disabled
+        });
+
     }
+
 
     @FXML
     private void sendRequest(ActionEvent event) {
@@ -340,6 +352,7 @@ public class RequestController {
         } else {
             // Handle other authorization types or No Auth
             // No additional authorization headers needed
+            //ToDo: Add No Auth as a handling to clear any accidental auth type selections
         }
     }
 

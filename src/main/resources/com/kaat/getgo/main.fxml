@@ -18,6 +18,7 @@
 <?import javafx.scene.control.PasswordField?>
 <?import org.controlsfx.control.ToggleSwitch?>
 <?import javafx.scene.control.Slider?>
+<?import javafx.scene.control.ToggleButton?>
 <AnchorPane prefHeight="600.0" prefWidth="-1.0" xmlns="http://javafx.com/javafx/20" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.kaat.getgo.RequestController">
     <children>
         <!-- First Line: Method Type, URL Text Box, and Send Request Button -->
@@ -128,6 +129,7 @@
                             <Label text="Automatically follow redirects: When enabled, Postman will automatically follow HTTP redirects (e.g., from HTTP to HTTPS) during requests." />
                             <ToggleSwitch fx:id="followRedirectsToggle" selected="true" />
                         </HBox>
+
                         <HBox spacing="10" alignment="CENTER_LEFT">
                             <Label text="Maximum number of redirects: This setting allows you to specify the maximum number of redirects Postman will follow. It's used in conjunction with the 'Automatically follow redirects' option." />
                             <Slider fx:id="maxRedirectsSlider" min="0" max="10" value="0" blockIncrement="1" minorTickCount="0" majorTickUnit="1" showTickLabels="true" showTickMarks="true" snapToTicks="true" />
