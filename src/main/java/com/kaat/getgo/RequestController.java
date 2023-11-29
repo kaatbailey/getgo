@@ -64,22 +64,22 @@ public class RequestController {
     private TextField bearerTokenField;
 
     @FXML
-    private TableView<ParamRow> paramsTable;
+    private TableView<KeyValuePair> paramsTable;
     @FXML
-    private TableColumn<ParamRow, Boolean> checkColumn;
+    private TableColumn<KeyValuePair, Boolean> checkColumn;
     @FXML
-    private TableColumn<ParamRow, String> keyColumn;
+    private TableColumn<KeyValuePair, String> keyColumn;
     @FXML
-    private TableColumn<ParamRow, String> valueColumn;
+    private TableColumn<KeyValuePair, String> valueColumn;
 
     @FXML
-    private TableView<HeaderRow> headersTable;
+    private TableView<KeyValuePair> headersTable;
     @FXML
-    private TableColumn<HeaderRow, Boolean> checkHeaderColumn;
+    private TableColumn<KeyValuePair, Boolean> checkHeaderColumn;
     @FXML
-    private TableColumn<HeaderRow, String> keyHeaderColumn;
+    private TableColumn<KeyValuePair, String> keyHeaderColumn;
     @FXML
-    private TableColumn<HeaderRow, String> valueHeaderColumn;
+    private TableColumn<KeyValuePair, String> valueHeaderColumn;
 
     @FXML
     private Slider maxRedirectsSlider;
@@ -115,15 +115,15 @@ public class RequestController {
 
 
         // Create an example row (you can add more rows programmatically)
-        List<ParamRow> paramRows = new ArrayList<>();
-        paramRows.add(new ParamRow(true, "Param1", "Value1"));
+        List<KeyValuePair> paramRows = new ArrayList<>();
+        paramRows.add(new KeyValuePair(true, "Param1", "Value1"));
 
         paramsTable.setItems(FXCollections.observableList(paramRows));
 
 
         // Create an example row for headers (you can add more rows programmatically)
-        List<HeaderRow> headerRows = new ArrayList<>();
-        headerRows.add(new HeaderRow(true, "Content-Type", "application/json"));
+        List<KeyValuePair> headerRows = new ArrayList<>();
+        headerRows.add(new KeyValuePair(true, "Content-Type", "application/json"));
 
         headersTable.setItems(FXCollections.observableList(headerRows));
 
@@ -147,7 +147,31 @@ public class RequestController {
 
     }
 
+    /**
+     * Appends request data to the StringBuilder based on the TableView and request type.
+     *
+     * @param request     The StringBuilder to append the request data to.
+     * @param tableView   The TableView containing key-value pair data.
+     * @param requestType The type of request data (e.g., "Params", "Headers").
+     * used in sendRequest()
+     */
+    private void appendRequestData(StringBuilder request, TableView<KeyValuePair> tableView, String requestType) {
+        // Extract data from the TableView of key-value pairs
+        String requestData = extractTableValues(tableView);
 
+        // Check if the extracted data is not empty before appending to the request
+        if (!requestData.isEmpty()) {
+            // Append the request data to the StringBuilder
+            request.append("Request ").append(requestType).append(": ").append(requestData).append("\n");
+        }
+    }
+
+
+    /**
+     * Handles the "Send Request" button click event.
+     * collecting all data in the form and passing it as a request String to sendHttpRequest
+     * @param event The ActionEvent triggered by the button click.
+     */
     @FXML
     private void sendRequest(ActionEvent event) {
         // Retrieve the request URL from the user input
@@ -165,22 +189,16 @@ public class RequestController {
             }
             request.append("Request Method: ").append(selectedMethod).append("\n");
 
-            // Extract Params and Headers from their respective TableViews
-            String requestParams = extractTableValues(paramsTable);
-            String requestHeaders = extractTableValues(headersTable);
+            // If there is Params Data or Header Data, pick it up and add it to the request.
+            appendRequestData(request, paramsTable, "Params");
+            appendRequestData(request, headersTable, "Headers");
+
+            // Retrieve additional information from the UI components
             String authType = (authorization != null) ? authorization.getValue() : null;
             String additionalSettings = (settings != null) ? settings.getText() : null;
 
             // Build the request based on whether each field has a value
             request.append("Request URL: ").append(requestUrl).append("\n");
-
-            if (requestParams != null && !requestParams.isEmpty()) {
-                request.append("Request Params: ").append(requestParams).append("\n");
-            }
-
-            if (requestHeaders != null && !requestHeaders.isEmpty()) {
-                request.append("Request Headers: ").append(requestHeaders).append("\n");
-            }
 
             if (authType != null && !authType.isEmpty()) {
                 request.append("Authorization Type: ").append(authType).append("\n");
@@ -200,6 +218,7 @@ public class RequestController {
     }
 
 
+
     public interface TableRow {
         StringProperty keyProperty();
 
@@ -213,18 +232,18 @@ public class RequestController {
      * @param tableView The TableView containing the data to be extracted.
      * @return A formatted string of key-value pairs extracted from the TableView.
      */
-    private String extractTableValues(TableView<? extends TableRow> tableView) {
+    private <KeyValue extends RequestController.TableRow> String extractTableValues(TableView<KeyValuePair> tableView) {
         // Retrieve the list of rows from the TableView
-        ObservableList<? extends TableRow> rows = tableView.getItems();
+        ObservableList<KeyValuePair> rows = tableView.getItems();
 
         // Initialize a StringBuilder to build the formatted string
         StringBuilder values = new StringBuilder();
 
         // Iterate through each row in the TableView
-        for (TableRow row : rows) {
+        for (KeyValuePair row : rows) {
             // Extract key and value properties from the row
-            String key = String.valueOf(row.keyProperty());
-            String value = String.valueOf(row.valueProperty());
+            String key = row.keyProperty().get();
+            String value = row.valueProperty().get();
 
             // Check if both key and value are not empty before appending to the result
             if (key != null && !key.isEmpty() && value != null && !value.isEmpty()) {
@@ -232,9 +251,10 @@ public class RequestController {
             }
         }
 
-        // Return the formatted string, trimming any leading or trailing whitespace
         return values.toString().trim();
     }
+
+
 
 
     /**
@@ -281,7 +301,7 @@ public class RequestController {
 
             // Set request headers (if available)
             if (requestHeaders != null && !requestHeaders.isEmpty()) {
-                connection.setRequestProperty("Content-Type", "application/json");
+                //connection.setRequestProperty("Content-Type", "application/json");
                 // You can parse and set other headers as needed
             }
 
