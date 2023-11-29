@@ -10,15 +10,13 @@ import javafx.scene.control.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.*;
 
 import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.HBox;
 import org.controlsfx.control.ToggleSwitch;
 
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -109,7 +107,7 @@ public class RequestController {
         checkHeaderColumn.setCellValueFactory(cellData -> cellData.getValue().selectedProperty());
         checkHeaderColumn.setCellFactory(CheckBoxTableCell.forTableColumn(checkHeaderColumn));
 
-      // Key and Value columns for Header table
+        // Key and Value columns for Header table
         keyHeaderColumn.setCellValueFactory(cellData -> cellData.getValue().keyProperty());
         keyHeaderColumn.setCellFactory(TextFieldTableCell.forTableColumn());
         valueHeaderColumn.setCellValueFactory(cellData -> cellData.getValue().valueProperty());
@@ -152,14 +150,17 @@ public class RequestController {
 
     @FXML
     private void sendRequest(ActionEvent event) {
+        // Retrieve the request URL from the user input
         String requestUrl = url.getText();
 
         // Check if the request URL is not null and is a valid URL
         if (requestUrl != null && isValidURL(requestUrl)) {
+            // Initialize a StringBuilder to build the request details
             StringBuilder request = new StringBuilder();
+
+            // Determine the selected HTTP method, defaulting to GET if none is selected
             String selectedMethod = method.getValue();
             if (selectedMethod == null || selectedMethod.isEmpty()) {
-                // Default to GET if no method is selected
                 selectedMethod = "GET";
             }
             request.append("Request Method: ").append(selectedMethod).append("\n");
@@ -198,44 +199,75 @@ public class RequestController {
         }
     }
 
+
     public interface TableRow {
         StringProperty keyProperty();
+
         StringProperty valueProperty();
     }
 
 
+    /**
+     * Extracts key-value pairs from a TableView and constructs a formatted string.
+     *
+     * @param tableView The TableView containing the data to be extracted.
+     * @return A formatted string of key-value pairs extracted from the TableView.
+     */
     private String extractTableValues(TableView<? extends TableRow> tableView) {
+        // Retrieve the list of rows from the TableView
         ObservableList<? extends TableRow> rows = tableView.getItems();
+
+        // Initialize a StringBuilder to build the formatted string
         StringBuilder values = new StringBuilder();
 
+        // Iterate through each row in the TableView
         for (TableRow row : rows) {
+            // Extract key and value properties from the row
             String key = String.valueOf(row.keyProperty());
             String value = String.valueOf(row.valueProperty());
 
+            // Check if both key and value are not empty before appending to the result
             if (key != null && !key.isEmpty() && value != null && !value.isEmpty()) {
                 values.append(key).append(": ").append(value).append("\n");
             }
         }
 
+        // Return the formatted string, trimming any leading or trailing whitespace
         return values.toString().trim();
     }
 
 
-
+    /**
+     * Checks if the given string is a valid URL.
+     *
+     * @param url The string to be checked for URL validity.
+     * @return {@code true} if the string is a valid URL; otherwise, {@code false}.
+     */
     private boolean isValidURL(String url) {
         try {
+            // Attempt to create a URL object from the provided string and convert it to a URI
             new URL(url).toURI();
+
+            // If the above line doesn't throw an exception, the URL is considered valid
             return true;
-        } catch (Exception e) {
+        } catch (MalformedURLException | URISyntaxException e) {
+            // An exception is caught if the URL is malformed or cannot be converted to a URI
             return false;
         }
     }
 
 
+    /**
+     * Sends an HTTP request and returns the response as a String.
+     *
+     * @param request The formatted request string containing URL, method, headers, and parameters.
+     * @return The response received from the server, or an error message if the request fails.
+     */
     private String sendHttpRequest(String request) {
         try {
-            // Create a URL object from the request URL
-            URL requestUrl = new URL(Objects.requireNonNull(getRequestURLFromRequest(request)));
+            // Extract the URL from the request string
+            String requestUrlString = Objects.requireNonNull(getRequestURLFromRequest(request));
+            URL requestUrl = new URL(requestUrlString);
 
             // Extract request method and headers from the request string
             String requestMethod = getRequestHeaderValue(request, "Request Method");
@@ -282,37 +314,81 @@ public class RequestController {
                 // Handle error response
                 return "Error: " + responseCode;
             }
+        } catch (MalformedURLException | ProtocolException e) {
+            // Handle URL or protocol-related exceptions
+            e.printStackTrace();
+            return "Error: " + e.getMessage();
+        } catch (IOException e) {
+            // Handle general input/output exceptions
+            e.printStackTrace();
+            return "Error: " + e.getMessage();
         } catch (Exception e) {
+            // Handle other exceptions
             e.printStackTrace();
             return "Error: " + e.getMessage();
         }
     }
 
-    // Extract a specific header value from the request string
+
+    /**
+     * Extracts the value of a specific header from the given request string.
+     *
+     * @param request    The formatted request string containing headers.
+     * @param headerName The name of the header whose value needs to be extracted.
+     * @return The value of the specified header, or {@code null} if the header is not found.
+     */
     private String getRequestHeaderValue(String request, String headerName) {
+        // Find the starting position of the specified header in the request string
         int headerStart = request.indexOf(headerName);
+
+        // If the header is not found, return null
         if (headerStart == -1) {
             return null; // Header not found
         }
+
+        // Calculate the starting position of the header value
         int headerValueStart = headerStart + headerName.length() + 1;
+
+        // Find the end position of the header value, considering a newline character as the delimiter
         int headerValueEnd = request.indexOf("\n", headerValueStart);
+
+        // If the end position is not found, set it to the end of the request string
         if (headerValueEnd == -1) {
             headerValueEnd = request.length();
         }
+
+        // Extract and trim the header value from the request string
         return request.substring(headerValueStart, headerValueEnd).trim();
     }
 
-    // Extract the request URL from the request string
+
+    /**
+     * Extracts the request URL from the given formatted request string.
+     *
+     * @param request The formatted request string containing the request URL.
+     * @return The extracted request URL, or {@code null} if the URL is not found.
+     */
     private String getRequestURLFromRequest(String request) {
+        // Find the starting position of the "Request URL:" tag in the request string
         int urlStart = request.indexOf("Request URL:");
+
+        // If the "Request URL:" tag is not found, return null
         if (urlStart == -1) {
             return null; // URL not found
         }
+
+        // Calculate the starting position of the request URL value
         int urlValueStart = urlStart + "Request URL:".length() + 1;
+
+        // Find the end position of the request URL value, considering a newline character as the delimiter
         int urlValueEnd = request.indexOf("\n", urlValueStart);
+
+        // If the end position is not found, set it to the end of the request string
         if (urlValueEnd == -1) {
             urlValueEnd = request.length();
         }
+
+        // Extract and trim the request URL from the request string
         return request.substring(urlValueStart, urlValueEnd).trim();
     }
 
@@ -325,10 +401,17 @@ public class RequestController {
         this.apiKeyLocation = location;
     }
 
-    // handle combo box change to Auth Type: Data change
+    /**
+     * Handles changes in authorization type for an HTTP connection.
+     *
+     * @param connection The HttpURLConnection object for the request.
+     * @param authType   The selected authorization type (e.g., Basic Auth, Bearer Token, API Key).
+     * @param headers    The credentials or token associated with the selected authorization type.
+     * @throws IOException If an I/O exception occurs while setting authorization headers.
+     */
     private void handleAuthorization(HttpURLConnection connection, String authType, String headers) throws IOException {
         if ("Basic Auth".equals(authType)) {
-            // Handle Basic Auth
+            // Handle Basic Authentication
             String[] credentials = headers.split(":");
             String username = credentials[0];
             String password = credentials[1];
@@ -343,7 +426,7 @@ public class RequestController {
                 // Handle API Key in Header
                 connection.setRequestProperty("api-key", headers);
             } else if ("Query Params".equals(apiKeyLocation)) {
-                // Handle API Key in Query Params
+                // Handle API Key in Query Parameters
                 String apiKeyValue = URLEncoder.encode(headers, StandardCharsets.UTF_8);
                 String url = connection.getURL().toString();
                 url += (url.contains("?") ? "&" : "?") + "api-key=" + apiKeyValue;
@@ -352,25 +435,30 @@ public class RequestController {
         } else {
             // Handle other authorization types or No Auth
             // No additional authorization headers needed
-            //ToDo: Add No Auth as a handling to clear any accidental auth type selections
+            // ToDo: Add No Auth handling to clear any accidental auth type selections
         }
     }
 
 
-//handle combo box change to Auth Type: Display change
+    /**
+     * Handles the change in the selected authorization type in the user interface.
+     * Adjusts the visibility of input fields based on the selected authorization type.
+     *
+     * @param selectedAuthType The newly selected authorization type (e.g., Basic Auth, API Key, Bearer Token).
+     */
     private void handleAuthorizationTypeChange(String selectedAuthType) {
         if ("Basic Auth".equals(selectedAuthType)) {
-            // Show Basic Auth input fields
+            // Display input fields for Basic Auth, hide others
             basicAuthFields.setVisible(true);
             apiKeyFields.setVisible(false);
             bearerTokenFields.setVisible(false);
         } else if ("API Key".equals(selectedAuthType)) {
-            // Show API Key input fields
+            // Display input fields for API Key, hide others
             basicAuthFields.setVisible(false);
             apiKeyFields.setVisible(true);
             bearerTokenFields.setVisible(false);
         } else if ("Bearer Token".equals(selectedAuthType)) {
-            // Show Bearer Token input fields
+            // Display input fields for Bearer Token, hide others
             basicAuthFields.setVisible(false);
             apiKeyFields.setVisible(false);
             bearerTokenFields.setVisible(true);
@@ -381,9 +469,6 @@ public class RequestController {
             bearerTokenFields.setVisible(false);
         }
     }
-
-
-
-
 }
+
 
