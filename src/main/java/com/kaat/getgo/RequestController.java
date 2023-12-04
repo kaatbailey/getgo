@@ -1,5 +1,6 @@
 package com.kaat.getgo;
 
+import javafx.application.Platform;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -10,6 +11,7 @@ import javafx.scene.control.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.*;
 
 import javafx.scene.control.cell.CheckBoxTableCell;
@@ -123,7 +125,7 @@ public class RequestController {
 
         // Create an example row for headers (you can add more rows programmatically)
         List<KeyValuePair> headerRows = new ArrayList<>();
-        headerRows.add(new KeyValuePair(true, "Content-Type", "application/json"));
+        headerRows.add(new KeyValuePair(true, "Example-Content-Type", "application/json"));
 
         headersTable.setItems(FXCollections.observableList(headerRows));
 
@@ -173,7 +175,7 @@ public class RequestController {
      * @param event The ActionEvent triggered by the button click.
      */
     @FXML
-    private void sendRequest(ActionEvent event) {
+    private void handleSendRequestButton(ActionEvent event) throws IOException {
         // Retrieve the request URL from the user input
         String requestUrl = url.getText();
 
@@ -208,9 +210,8 @@ public class RequestController {
                 request.append("Additional Settings: ").append(additionalSettings);
             }
 
-            // Handle the request and populate the response TextArea
-            String responseText = sendHttpRequest(request.toString());
-            response.setText(responseText);
+           checkForSendRequestFormTypes(request.toString());
+
         } else {
             // Handle the case where the request URL is missing or malformed
             // You can show an error message to the user or take appropriate action.
@@ -276,6 +277,53 @@ public class RequestController {
         }
     }
 
+    public void processUrl(String urlString) {
+        try {
+            // Create URL object
+            URL url = new URL(urlString);
+
+            // Open connection
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+            // Enable input and output streams for the request
+            connection.setDoInput(true);
+            connection.setDoOutput(true);
+
+            // Send the request and receive the response
+            int responseCode = connection.getResponseCode();
+
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                // Read the response from the server
+                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                StringBuilder responseBody = new StringBuilder();
+                String line;
+
+                while ((line = reader.readLine()) != null) {
+                    responseBody.append(line);
+                }
+                reader.close();
+                Platform.runLater(() -> response.setText(responseBody.toString()));
+            } else {
+                // Handle error response
+                Platform.runLater(() ->  response.setText("Error: " + responseCode));
+            }
+        } catch (MalformedURLException | ProtocolException e) {
+            // Handle URL or protocol-related exceptions
+            e.printStackTrace();
+            Platform.runLater(() ->  response.setText("Error: " + e.getMessage()));
+        } catch (IOException e) {
+            // Handle general input/output exceptions
+            e.printStackTrace();
+            Platform.runLater(() -> response.setText("Error: " + e.getMessage()));
+        } catch (Exception e) {
+            // Handle other exceptions
+            e.printStackTrace();
+            Platform.runLater(() -> response.setText("Error: " + e.getMessage()));
+        }
+
+
+    }
+
 
     /**
      * Sends an HTTP request and returns the response as a String.
@@ -283,70 +331,60 @@ public class RequestController {
      * @param request The formatted request string containing URL, method, headers, and parameters.
      * @return The response received from the server, or an error message if the request fails.
      */
-    private String sendHttpRequest(String request) {
-        try {
-            // Extract the URL from the request string
-            String requestUrlString = Objects.requireNonNull(getRequestURLFromRequest(request));
-            URL requestUrl = new URL(requestUrlString);
+    private void checkForSendRequestFormTypes(String request) throws IOException {
+        // Extract the URL from the request string
+        String requestUrlString = Objects.requireNonNull(getRequestURLFromRequest(request));
+        URL requestUrl = new URL(requestUrlString);
 
-            // Extract request method and headers from the request string
-            String requestMethod = getRequestHeaderValue(request, "Request Method");
-            String requestHeaders = getRequestHeaderValue(request, "Request Headers");
+        // Extract request method, headers, and params from the request string
+        String requestMethod = getRequestHeaderValue(request, "Request Method");
+        String requestHeaders = getRequestHeaderValue(request, "Request Headers");
+        String requestParams = getRequestHeaderValue(request, "Request Params");
 
-            // Open a connection to the URL
-            HttpURLConnection connection = (HttpURLConnection) requestUrl.openConnection();
 
-            // Set the request method
-            connection.setRequestMethod(requestMethod);
+        if (requestParams != null && !requestParams.isEmpty() && !requestParams.contains("Param1")) {
+            // Split the requestParams into individual key-value pairs
+            String[] paramPairs = requestParams.split("\n");
 
-            // Set request headers (if available)
-            if (requestHeaders != null && !requestHeaders.isEmpty()) {
-                //connection.setRequestProperty("Content-Type", "application/json");
-                // You can parse and set other headers as needed
-            }
+            // Initialize a StringBuilder to build the query string
+            StringBuilder queryString = new StringBuilder();
 
-            // Enable input and output streams for the request
-            connection.setDoInput(true);
-            connection.setDoOutput(true);
+            for (String paramPair : paramPairs) {
+                // Split each key-value pair
+                String[] keyValue = paramPair.split(":");
+                if (keyValue.length == 2) {
+                    // Trim and URL encode the key and value
+                    String key = URLEncoder.encode(keyValue[0].trim(), StandardCharsets.UTF_8.name());
+                    String value = URLEncoder.encode(keyValue[1].trim(), StandardCharsets.UTF_8.name());
 
-            // If it's a POST or PUT request, write the request body (params) to the output stream
-            if ("POST".equals(requestMethod) || "PUT".equals(requestMethod)) {
-                // Extract and write requestParams to the output stream
-                String requestParams = getRequestHeaderValue(request, "Request Params");
-                // You can write the requestParams to the output stream
-            }
-
-            // Send the request and receive the response
-            int responseCode = connection.getResponseCode();
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                // Read the response from the server
-                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                StringBuilder response = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    response.append(line);
+                    // Append the encoded key-value pair to the query string
+                    queryString.append(key).append("=").append(value).append("&");
                 }
-                reader.close();
-
-                // Return the response as a String
-                return response.toString();
-            } else {
-                // Handle error response
-                return "Error: " + responseCode;
             }
-        } catch (MalformedURLException | ProtocolException e) {
-            // Handle URL or protocol-related exceptions
-            e.printStackTrace();
-            return "Error: " + e.getMessage();
-        } catch (IOException e) {
-            // Handle general input/output exceptions
-            e.printStackTrace();
-            return "Error: " + e.getMessage();
-        } catch (Exception e) {
-            // Handle other exceptions
-            e.printStackTrace();
-            return "Error: " + e.getMessage();
+
+            // Remove the trailing "&" from the query string
+            if (queryString.length() > 0) {
+                queryString.setLength(queryString.length() - 1);
+            }
+
+
+            //Handle
+
+            // Append the query string to the URL
+            String urlWithParams = requestUrl + "?" + queryString.toString();
+            //what about headers?
+            processUrl(urlWithParams);
+            return;
         }
+
+        if (!requestHeaders.isEmpty()){
+
+            //handleHeaders
+        }
+
+        // Process the URL and get the response
+       processUrl(String.valueOf(requestUrl));
+
     }
 
 
