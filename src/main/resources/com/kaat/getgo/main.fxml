@@ -35,7 +35,7 @@
                 </items>
             </ComboBox>
             <TextField fx:id="url" promptText="https://api.example.com/endpoint"/>
-            <Button text="Send Request" onAction="#sendRequest"/>
+            <Button text="Send Request" onAction="#handleSendRequestButton"/>
         </HBox>
 
         <!-- Accordion for Params, Headers, Authorization, and Settings -->

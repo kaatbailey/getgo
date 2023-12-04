@@ -1,5 +1,6 @@
 package com.kaat.getgo;
 
+import javafx.application.Platform;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -174,7 +175,7 @@ public class RequestController {
      * @param event The ActionEvent triggered by the button click.
      */
     @FXML
-    private void sendRequest(ActionEvent event) {
+    private void handleSendRequestButton(ActionEvent event) throws IOException {
         // Retrieve the request URL from the user input
         String requestUrl = url.getText();
 
@@ -209,9 +210,8 @@ public class RequestController {
                 request.append("Additional Settings: ").append(additionalSettings);
             }
 
-            // Handle the request and populate the response TextArea
-            String responseText = sendHttpRequest(request.toString());
-            response.setText(responseText);
+           checkForSendRequestFormTypes(request.toString());
+
         } else {
             // Handle the case where the request URL is missing or malformed
             // You can show an error message to the user or take appropriate action.
@@ -277,6 +277,53 @@ public class RequestController {
         }
     }
 
+    public void processUrl(String urlString) {
+        try {
+            // Create URL object
+            URL url = new URL(urlString);
+
+            // Open connection
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+            // Enable input and output streams for the request
+            connection.setDoInput(true);
+            connection.setDoOutput(true);
+
+            // Send the request and receive the response
+            int responseCode = connection.getResponseCode();
+
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                // Read the response from the server
+                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                StringBuilder responseBody = new StringBuilder();
+                String line;
+
+                while ((line = reader.readLine()) != null) {
+                    responseBody.append(line);
+                }
+                reader.close();
+                Platform.runLater(() -> response.setText(responseBody.toString()));
+            } else {
+                // Handle error response
+                Platform.runLater(() ->  response.setText("Error: " + responseCode));
+            }
+        } catch (MalformedURLException | ProtocolException e) {
+            // Handle URL or protocol-related exceptions
+            e.printStackTrace();
+            Platform.runLater(() ->  response.setText("Error: " + e.getMessage()));
+        } catch (IOException e) {
+            // Handle general input/output exceptions
+            e.printStackTrace();
+            Platform.runLater(() -> response.setText("Error: " + e.getMessage()));
+        } catch (Exception e) {
+            // Handle other exceptions
+            e.printStackTrace();
+            Platform.runLater(() -> response.setText("Error: " + e.getMessage()));
+        }
+
+
+    }
+
 
     /**
      * Sends an HTTP request and returns the response as a String.
@@ -284,57 +331,18 @@ public class RequestController {
      * @param request The formatted request string containing URL, method, headers, and parameters.
      * @return The response received from the server, or an error message if the request fails.
      */
-    private String sendHttpRequest(String request) {
-        try {
-            // Extract the URL from the request string
-            String requestUrlString = Objects.requireNonNull(getRequestURLFromRequest(request));
-            URL requestUrl = new URL(requestUrlString);
+    private void checkForSendRequestFormTypes(String request) throws IOException {
+        // Extract the URL from the request string
+        String requestUrlString = Objects.requireNonNull(getRequestURLFromRequest(request));
+        URL requestUrl = new URL(requestUrlString);
 
-            // Extract request method and headers from the request string
-            String requestMethod = getRequestHeaderValue(request, "Request Method");
-            String requestHeaders = getRequestHeaderValue(request, "Request Headers");
-            String requestParams = getRequestHeaderValue(request, "Request Params");
+        // Extract request method, headers, and params from the request string
+        String requestMethod = getRequestHeaderValue(request, "Request Method");
+        String requestHeaders = getRequestHeaderValue(request, "Request Headers");
+        String requestParams = getRequestHeaderValue(request, "Request Params");
 
-            // Open a connection to the URL
-            HttpURLConnection connection = (HttpURLConnection) requestUrl.openConnection();
 
-            // Set the request method
-            connection.setRequestMethod(requestMethod);
-
-            // Set request headers (if available)
-            if (requestHeaders != null && !requestHeaders.isEmpty()) {
-                // Parse and set other headers as needed
-                // For example:
-                // connection.setRequestProperty("Content-Type", "application/json");
-            }
-
-            // Enable input and output streams for the request
-            connection.setDoInput(true);
-            connection.setDoOutput(true);
-
-            // If it's a POST or PUT request, handle requestParams
-            if ("POST".equals(requestMethod) || "PUT".equals(requestMethod)) {
-                handleRequestParams(connection, requestParams);
-            }
-
-            // ... (rest of the method remains the same)
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Error: " + e.getMessage();
-        }
-    }
-
-    /**
-     * Handle request parameters by encoding them and appending to the URL.
-     *
-     * @param connection    The HttpURLConnection object.
-     * @param requestParams The request parameters in the format "key1: value1\nkey2: value2\n...".
-     * @throws UnsupportedEncodingException If encoding fails.
-     * @throws MalformedURLException       If the URL is malformed.
-     */
-    private void handleRequestParams(HttpURLConnection connection, String requestParams)
-            throws UnsupportedEncodingException, MalformedURLException {
-        if (requestParams != null && !requestParams.isEmpty()) {
+        if (requestParams != null && !requestParams.isEmpty() && !requestParams.contains("Param1")) {
             // Split the requestParams into individual key-value pairs
             String[] paramPairs = requestParams.split("\n");
 
@@ -359,29 +367,25 @@ public class RequestController {
                 queryString.setLength(queryString.length() - 1);
             }
 
+
+            //Handle
+
             // Append the query string to the URL
-            String urlWithParams = connection.getURL().toString() + "?" + queryString.toString();
-            connection = (HttpURLConnection) new URL(urlWithParams).openConnection();
+            String urlWithParams = requestUrl + "?" + queryString.toString();
+            //what about headers?
+            processUrl(urlWithParams);
+            return;
         }
-    }
 
+        if (!requestHeaders.isEmpty()){
 
-            /**
-        } catch (MalformedURLException | ProtocolException e) {
-            // Handle URL or protocol-related exceptions
-            e.printStackTrace();
-            return "Error: " + e.getMessage();
-        } catch (IOException e) {
-            // Handle general input/output exceptions
-            e.printStackTrace();
-            return "Error: " + e.getMessage();
-        } catch (Exception e) {
-            // Handle other exceptions
-            e.printStackTrace();
-            return "Error: " + e.getMessage();
+            //handleHeaders
         }
+
+        // Process the URL and get the response
+       processUrl(String.valueOf(requestUrl));
+
     }
-**/
 
 
     /**
