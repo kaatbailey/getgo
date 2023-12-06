@@ -11,7 +11,6 @@ import javafx.scene.control.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 import java.net.*;
 
 import javafx.scene.control.cell.CheckBoxTableCell;
@@ -210,14 +209,19 @@ public class RequestController {
                 request.append("Additional Settings: ").append(additionalSettings);
             }
 
-           checkForSendRequestFormTypes(request.toString());
+            if (selectedMethod.equals("GET"))
+                handleURLParameterAndHeaders(String.valueOf(request));
 
-        } else {
-            // Handle the case where the request URL is missing or malformed
-            // You can show an error message to the user or take appropriate action.
+            if (selectedMethod.equals("PUT") || selectedMethod.equals("POST"))
+                handleBodyParameterAndHeaders(String.valueOf(request));
+
         }
+
     }
 
+    private void handleBodyParameterAndHeaders(String s) {
+//Todo: Implement adding Parameters and Headers to the body due to PUT or POST method.
+    }
 
 
     public interface TableRow {
@@ -277,10 +281,12 @@ public class RequestController {
         }
     }
 
-    public void processUrl(String urlString) {
+    public void processUrl(String urlString, String request) {
         try {
             // Create URL object
             URL url = new URL(urlString);
+            String requestMethod = getRequestHeaderValue(request, "Request Method");
+            String requestHeaders = getRequestHeaderValue(request, "Request Headers");
 
             // Open connection
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -288,6 +294,12 @@ public class RequestController {
             // Enable input and output streams for the request
             connection.setDoInput(true);
             connection.setDoOutput(true);
+
+            //if there were headers passed in the request we need to pull those and add them to the connection object.
+            //we also need to know what method type we're using GET? PUT ? POST? and handle those appropriately.
+            //connection.setRequestProperty("Authorization", "Bearer YOUR_TOKEN");
+            //connection.setRequestProperty("Custom-Header", "Custom-Value");
+
 
             // Send the request and receive the response
             int responseCode = connection.getResponseCode();
@@ -309,7 +321,7 @@ public class RequestController {
             }
         } catch (MalformedURLException | ProtocolException e) {
             // Handle URL or protocol-related exceptions
-            e.printStackTrace();
+            e.printStackTrace(); //todo: add overall logging and add these to that logging.
             Platform.runLater(() ->  response.setText("Error: " + e.getMessage()));
         } catch (IOException e) {
             // Handle general input/output exceptions
@@ -329,16 +341,20 @@ public class RequestController {
      * Sends an HTTP request and returns the response as a String.
      *
      * @param request The formatted request string containing URL, method, headers, and parameters.
-     * @return The response received from the server, or an error message if the request fails.
+     *
+     *
+     *
+     *                The flow should go if method is GET then if parameters, go into url
+     *                if headers, go into url.
+     *                if method is PUT or POST then parameters and headers go into object.
      */
-    private void checkForSendRequestFormTypes(String request) throws IOException {
+    private void handleURLParameterAndHeaders(String request) throws IOException {
+        //This will always mean that the Method is GET and things should be placed in the URL.
+
         // Extract the URL from the request string
         String requestUrlString = Objects.requireNonNull(getRequestURLFromRequest(request));
         URL requestUrl = new URL(requestUrlString);
 
-        // Extract request method, headers, and params from the request string
-        String requestMethod = getRequestHeaderValue(request, "Request Method");
-        String requestHeaders = getRequestHeaderValue(request, "Request Headers");
         String requestParams = getRequestHeaderValue(request, "Request Params");
 
 
@@ -354,8 +370,8 @@ public class RequestController {
                 String[] keyValue = paramPair.split(":");
                 if (keyValue.length == 2) {
                     // Trim and URL encode the key and value
-                    String key = URLEncoder.encode(keyValue[0].trim(), StandardCharsets.UTF_8.name());
-                    String value = URLEncoder.encode(keyValue[1].trim(), StandardCharsets.UTF_8.name());
+                    String key = URLEncoder.encode(keyValue[0].trim(), StandardCharsets.UTF_8);
+                    String value = URLEncoder.encode(keyValue[1].trim(), StandardCharsets.UTF_8);
 
                     // Append the encoded key-value pair to the query string
                     queryString.append(key).append("=").append(value).append("&");
@@ -363,27 +379,21 @@ public class RequestController {
             }
 
             // Remove the trailing "&" from the query string
-            if (queryString.length() > 0) {
+            if (!queryString.isEmpty()) {
                 queryString.setLength(queryString.length() - 1);
             }
-
-
-            //Handle
 
             // Append the query string to the URL
             String urlWithParams = requestUrl + "?" + queryString.toString();
             //what about headers?
-            processUrl(urlWithParams);
+            processUrl(urlWithParams,request);
             return;
         }
 
-        if (!requestHeaders.isEmpty()){
-
-            //handleHeaders
-        }
+//Todo: check for Headers and add any of those into the URL.
 
         // Process the URL and get the response
-       processUrl(String.valueOf(requestUrl));
+       processUrl(String.valueOf(requestUrl), request);
 
     }
 
