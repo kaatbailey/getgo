@@ -14,6 +14,7 @@ import java.io.InputStreamReader;
 import java.net.*;
 
 import javafx.scene.control.cell.CheckBoxTableCell;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.HBox;
 import org.controlsfx.control.ToggleSwitch;
@@ -93,40 +94,56 @@ public class RequestController {
 
     public void initialize() {
 
-        // Initialize the Param columns
+// Initialize the Param columns
         checkColumn.setCellValueFactory(cellData -> cellData.getValue().selectedProperty());
         checkColumn.setCellFactory(CheckBoxTableCell.forTableColumn(checkColumn));
 
-        // Key and Value columns for Param table
+// Key and Value columns for Param table
         keyColumn.setCellValueFactory(cellData -> cellData.getValue().keyProperty());
         keyColumn.setCellFactory(TextFieldTableCell.forTableColumn());
         valueColumn.setCellValueFactory(cellData -> cellData.getValue().valueProperty());
         valueColumn.setCellFactory(TextFieldTableCell.forTableColumn());
 
-
-        // Check column for Header table
-        checkHeaderColumn.setCellValueFactory(cellData -> cellData.getValue().selectedProperty());
-        checkHeaderColumn.setCellFactory(CheckBoxTableCell.forTableColumn(checkHeaderColumn));
-
-        // Key and Value columns for Header table
-        keyHeaderColumn.setCellValueFactory(cellData -> cellData.getValue().keyProperty());
-        keyHeaderColumn.setCellFactory(TextFieldTableCell.forTableColumn());
-        valueHeaderColumn.setCellValueFactory(cellData -> cellData.getValue().valueProperty());
-        valueHeaderColumn.setCellFactory(TextFieldTableCell.forTableColumn());
-
-
-        // Create an example row (you can add more rows programmatically)
+// Create an example row (you can add more rows programmatically)
         List<KeyValuePair> paramRows = new ArrayList<>();
         paramRows.add(new KeyValuePair(true, "Param1", "Value1"));
 
         paramsTable.setItems(FXCollections.observableList(paramRows));
 
+// Add event handler to the TableView to add a new row on click
+        paramsTable.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) { // Check if it's a double-click
+                // Add a new empty row
+                paramsTable.getItems().add(new KeyValuePair(false, "", ""));
+            }
+        });
 
-        // Create an example row for headers (you can add more rows programmatically)
+
+
+// Check column for Header table
+        checkHeaderColumn.setCellValueFactory(cellData -> cellData.getValue().selectedProperty());
+        checkHeaderColumn.setCellFactory(CheckBoxTableCell.forTableColumn(checkHeaderColumn));
+
+// Key and Value columns for Header table
+        keyHeaderColumn.setCellValueFactory(cellData -> cellData.getValue().keyProperty());
+        keyHeaderColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+        valueHeaderColumn.setCellValueFactory(cellData -> cellData.getValue().valueProperty());
+        valueHeaderColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+
+// Create an example row for headers (you can add more rows programmatically)
         List<KeyValuePair> headerRows = new ArrayList<>();
         headerRows.add(new KeyValuePair(true, "Example-Content-Type", "application/json"));
 
         headersTable.setItems(FXCollections.observableList(headerRows));
+
+// Add event handler to the Headers TableView to add a new row on click
+        headersTable.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) { // Check if it's a double-click
+                // Add a new empty row
+                headersTable.getItems().add(new KeyValuePair(false, "", ""));
+            }
+        });
+
 
         //select authorization combobox
         authorization.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
@@ -212,16 +229,12 @@ public class RequestController {
             if (selectedMethod.equals("GET"))
                 handleURLParameterAndHeaders(String.valueOf(request));
 
-            if (selectedMethod.equals("PUT") || selectedMethod.equals("POST"))
-                handleBodyParameterAndHeaders(String.valueOf(request));
 
         }
 
     }
 
-    private void handleBodyParameterAndHeaders(String s) {
-//Todo: Implement adding Parameters and Headers to the body due to PUT or POST method.
-    }
+
 
 
     public interface TableRow {
@@ -281,6 +294,18 @@ public class RequestController {
         }
     }
 
+    private static void addHeaders(HttpURLConnection connection, String headers) {
+        if (headers != null && !headers.isEmpty()) {
+            String[] headerLines = headers.split("\n");
+            for (String headerLine : headerLines) {
+                String[] headerParts = headerLine.split(": ");
+                if (headerParts.length == 2) {
+                    connection.setRequestProperty(headerParts[0], headerParts[1]);
+                }
+            }
+        }
+    }
+
     public void processUrl(String urlString, String request) {
         try {
             // Create URL object
@@ -291,15 +316,15 @@ public class RequestController {
             // Open connection
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
-            // Enable input and output streams for the request
+            // Enable input and output streams for the request if it's PUT or POST
             connection.setDoInput(true);
             connection.setDoOutput(true);
 
-            //if there were headers passed in the request we need to pull those and add them to the connection object.
-            //we also need to know what method type we're using GET? PUT ? POST? and handle those appropriately.
-            //connection.setRequestProperty("Authorization", "Bearer YOUR_TOKEN");
-            //connection.setRequestProperty("Custom-Header", "Custom-Value");
+            // Set the request method (GET, POST, PUT, etc.)
+            connection.setRequestMethod(request);
 
+            // If it's a GET request, add headers
+            addHeaders(connection, requestHeaders);
 
             // Send the request and receive the response
             int responseCode = connection.getResponseCode();
